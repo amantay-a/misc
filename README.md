@@ -1,4 +1,4 @@
-# Sundry Notebooks
+# Sundry
 
 - [3d_likelihood.Rmd](3d_likelihood.Rmd): R 3d graph  - **R Markdown**
 
@@ -8,5 +8,5 @@
 
 - [traffic_camera.ipynb](traffic_camera.ipynb): Collecting shots from Auckland traffic cameras without authorisation - **Google Colab (Python)**
 
-- [weather_history_scraping.ipynb](weather_history_scraping.ipynb): Scrapping weather history for a long period without authorisation - **Jupyter Notebook(Python)**
+- [weather_history_scraping.ipynb](weather_history_scraping.ipynb): Scrapping weather history for a long period without authorisation - **Jupyter Notebook (Python)**
 
