@@ -1,6 +1,6 @@
 # Sundry Notebooks
 
-- [3d_likelihood.Rmd](3d_likelihood.Rmd): R 3d graph  - R Markdown.
+- [3d_likelihood.Rmd](3d_likelihood.Rmd): R 3d graph  - **R Markdown**
 
 - [50_Lines.ipynb](50_Lines.ipynb): Converting pictures to set of curves (the number of curves and their amplitude are controllable) - **Google Colab (Python)**
 
