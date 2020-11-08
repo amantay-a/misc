@@ -1,0 +1,50 @@
+---
+title: "Likelihood support 3d plot (html)"
+author: "Amantay Abdurakhmanov"
+output:
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plotly)
+```
+
+
+# Normal distribution assumption
+
+```{r cars}
+D <- Nile[1:20]
+x=seq(500, 1500, 1)
+plot(x, dnorm(x, mean = mean(D), sd = sd(D)), type='l')
+points(D, dnorm(D, mean = mean(D), sd= sd(D)), col='red')
+
+```
+
+# 3d plot for likelihood support function
+
+```{r pressure}
+like <- function(mean, sd) {sum(dnorm(D,mean=mean,sd=sd,log=TRUE))}
+likefun <- Vectorize(like)
+
+mean <- seq(700, 1400, by=1)
+sd <- seq(100, 500, by =1)
+likelihood <-outer(mean, sd, likefun)
+fig <- plot_ly(x = ~sd, y = ~mean, z = ~likelihood)
+fig <- fig%>%add_surface()
+fig
+
+
+max_l = max(likelihood)
+idxs = which(likelihood == max_l, arr.ind = TRUE)
+fig <- fig%>%add_markers(x= ~sd[idxs[2]], y = ~mean[idxs[1]], z = ~max_l, 
+                         mode = 'markers', marker = list(color = 'red'))
+fig
+
+
+l2 <-likelihood
+l2[,] <- max_l -2 
+fig <- fig%>%add_surface(z=~l2, opacity = 0.5)
+fig
+```
