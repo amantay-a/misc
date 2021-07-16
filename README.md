@@ -10,3 +10,4 @@
 
 - [weather_history_scraping.ipynb](weather_history_scraping.ipynb): Scrapping weather history for a long period without authorisation - **Jupyter Notebook (Python)**
 
+- [Python_to_PowerBI_acces_and_query.ipynb](Python_to_PowerBI_acces_and_query.ipynb): Export data from Power BI using XMLA Endpoint
