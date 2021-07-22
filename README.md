@@ -12,4 +12,4 @@
 
 - [Python_to_PowerBI_acces_and_query.ipynb](Python_to_PowerBI_acces_and_query.ipynb): Export data from Power BI using XMLA Endpoint
 
-- [Web3_ABI_functions_call.ipynb](Calling blockchain token ABI functions using Web3 and Ethereum JSON RPC) 
+- [Web3_ABI_functions_call.ipynb](Web3_ABI_functions_call.ipynb): Calling blockchain token ABI functions using Web3 and Ethereum JSON RPC 
