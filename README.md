@@ -13,3 +13,6 @@
 - [Python_to_PowerBI_acces_and_query.ipynb](Python_to_PowerBI_acces_and_query.ipynb): Export data from Power BI using XMLA Endpoint - **Jupyter Notebook (Python)**
 
 - [Web3_ABI_functions_call.ipynb](Web3_ABI_functions_call.ipynb): Calling blockchain token ABI functions using Web3 and Ethereum JSON RPC - **Jupyter Notebook (Python)** 
+
+- [multicall_and_normal_rpc_mix.ipynb](multicall_and_normal_rpc_mix.ipynb): Combining of Multicall and regular Ethereum RPC - **Jupyter Notebook (Python)** 
+
