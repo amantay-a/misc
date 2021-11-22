@@ -16,3 +16,5 @@
 
 - [multicall_and_normal_rpc_mix.ipynb](multicall_and_normal_rpc_mix.ipynb): Combining of Multicall and regular Ethereum RPC - **Jupyter Notebook (Python)** 
 
+- [EVM_logs_decode.ipynb](EVM_logs_decode.ipynb): EVM Logs Decode - **Jupyter Notebook (Python)** 
+
