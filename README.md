@@ -18,3 +18,6 @@
 
 - [EVM_logs_decode.ipynb](EVM_logs_decode.ipynb): EVM Logs Decode - **Jupyter Notebook (Python)** 
 
+- [chainlink_pricefeeds.ipynb](chainlink_pricefeeds.ipynb): Fetching data from Chainlink Pricefeeds - **Jupyter Notebook (Python)** 
+
+- [Gearbox_CA.ipynb](Gearbox_CA.ipynb): Dataset for Gearbox Credit Accounts -  https://app.gearbox.fi - **Jupyter Notebook (Python)** 
