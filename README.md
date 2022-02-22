@@ -16,7 +16,9 @@
 
 - [multicall_and_normal_rpc_mix.ipynb](multicall_and_normal_rpc_mix.ipynb): Combining of Multicall and regular Ethereum RPC - **Jupyter Notebook (Python)** 
 
-- [EVM_logs_decode.ipynb](EVM_logs_decode.ipynb): EVM Logs Decode - **Jupyter Notebook (Python)** 
+- [EVM_logs_decode.ipynb](EVM_logs_decode.ipynb): EVM logs decode - **Jupyter Notebook (Python)** 
+
+- [Terra_tx_info_decode.ipynb](Terra_tx_info_decode.ipynb): Terra tx data decode - **Jupyter Notebook (Python)** 
 
 - [chainlink_pricefeeds.ipynb](chainlink_pricefeeds.ipynb): Fetching data from Chainlink Pricefeeds - **Jupyter Notebook (Python)** 
 
