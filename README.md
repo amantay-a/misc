@@ -27,3 +27,5 @@
 - [Lido_APR.ipynb](Lido_APR.ipynb): Calculate Lido APR - **Jupyter Notebook (Python)** 
 
 - [Curve_APR.ipynb](Curve_APR.ipynb): Curve Pools data - **Jupyter Notebook (Python)** 
+
+- [Convex_APR.ipynb](Convex_APR.ipynb): Convex Pools data - **Jupyter Notebook (Python)** 
