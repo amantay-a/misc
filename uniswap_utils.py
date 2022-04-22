@@ -48,7 +48,7 @@ def getPoolPrice(w3,
 
     logging.info(f'UniV3Factory: {UniFactory}')
     if PoolFee <=1:
-        PoolFee*=10**6
+        PoolFee=int(PoolFee*10**6)
     for t_a in tokensA:
         t_a = Web3.toChecksumAddress(t_a)
         if not t_a in decimals:
@@ -65,7 +65,7 @@ def getPoolPrice(w3,
             if not pool:
                 pool = w3.eth.contract(address=UniFactory, abi=abi).functions.getPool(t_a, t_b, PoolFee).call()
                 t0 = None
-                logging.info(f'Factory pool: {pool}')
+                logging.info(f'Factory pool: {pool}, Pool Fee={PoolFee}/1e6')
                 if pool != '0x0000000000000000000000000000000000000000':
                     t0 = w3.eth.contract(address=pool, abi=abi).functions.token0().call()
                 pools[pool] = {t_a, t_b, PoolFee}
