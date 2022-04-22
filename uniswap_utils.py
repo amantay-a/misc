@@ -1,5 +1,6 @@
 import logging
 from web3 import Web3
+from web3.exceptions import BadFunctionCallOutput
 
 abi="""[
      {"name":"factory",
@@ -29,21 +30,23 @@ UniPoolFee = 3000 #0.3%
 decimals = {}
 pools = {}
 tokens0 = {}
+accFactory = {}
 
 def getPoolPrice(w3,
                  tokensA,
                  tokensB = {'0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'}, #Default WETH
                  TWAPWindows = [60, 300, 600, 3600], #measured in seconds
-                 blockNumber = None,
+                 blocks = ['latest'], #latest by default
+                 PoolFee = UniPoolFee, #3000 for 0.3%
                  Router = UniV3Router,
-                 PoolFee = UniPoolFee, # 3000 for 0.3%
                 ):
     ret_price = {}
     UniRouter = Web3.toChecksumAddress(Router)
-    UniFactory = w3.eth.contract(address=UniRouter, abi=abi).functions.factory().call()
+    if not UniRouter in accFactory:
+        accFactory[UniRouter] = w3.eth.contract(address=UniRouter, abi=abi).functions.factory().call()
+    UniFactory = accFactory[UniRouter]
+
     logging.info(f'UniV3Factory: {UniFactory}')
-    if not blockNumber:
-        blockNumber = 'latest'
     if PoolFee <=1:
         PoolFee*=10**6
     for t_a in tokensA:
@@ -79,24 +82,30 @@ def getPoolPrice(w3,
 
             logging.info(f'pool: {pool}, token0={t0}, decimals0={decimals0}, token1={t1}, decimals1={decimals0}')
 
-            ticks = w3.eth.contract(address=pool, abi=abi).functions.observe(TWAPWindows+[0]).call(block_identifier = blockNumber)[0]
+            for blockNumber in blocks:
+                try:
+                    ticks = w3.eth.contract(address=pool, abi=abi).functions.observe(TWAPWindows+[0]).call(block_identifier = blockNumber)[0]
 
-            price = [1.0001**((ticks[-1] - ticks[i])/x) for i, x in enumerate(TWAPWindows)]
-            logging.debug(f'pool: {pool}, step 1, price= {price}')
+                    price = [1.0001**((ticks[-1] - ticks[i])/x) for i, x in enumerate(TWAPWindows)]
+                    logging.debug(f'block={blockNumber}, pool: {pool}, tick price= {price}')
 
-            price = [x*pow(10, decimals0)/pow(10, decimals1) for x in price]
-            logging.debug(f'pool: {pool}, step 2, price= {price}')
+                    price = [x*pow(10, decimals0)/pow(10, decimals1) for x in price]
+                    logging.debug(f'block={blockNumber}, pool: {pool}, decimal price= {price}')
 
-            if t0!=t_a: #reverse price
-                price = [1/x for x in price]
-            logging.debug(f'pool: {pool}, step 3, price= {price}')
+                    if t0!=t_a: #reverse price
+                        price = [1/x for x in price]
+                        logging.debug(f'block={blockNumber}, pool: {pool}, reverse price= {price}')
 
-            price = {TWAPWindows[i]:x for i, x in enumerate(price)}
-            logging.debug(f'pool: {pool}, step 4, price= {price}')
+                    price = {TWAPWindows[i]:x for i, x in enumerate(price)}
 
-            if blockNumber in ret_price:
-                ret_price[blockNumber][t_a+'-'+t_b] = {'pool':pool, 'twap': price}
-            else:
-                ret_price[blockNumber] = {t_a+'-'+t_b :{'pool':pool, 'twap': price}}
+                except BadFunctionCallOutput as err:
+                    price = {TWAPWindows[i]:None for i, x in enumerate(TWAPWindows)}
+                    logging.error(f'block={blockNumber}, pool: {pool}, error: {err}')
+
+                logging.info(f'block={blockNumber}, pool: {pool}, step, price= {price}')
+                if blockNumber in ret_price:
+                    ret_price[blockNumber][t_a+'-'+t_b] = {'pool':pool, 'twap': price}
+                else:
+                    ret_price[blockNumber] = {t_a+'-'+t_b :{'pool':pool, 'twap': price}}
 
     return ret_price
