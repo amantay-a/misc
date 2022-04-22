@@ -64,7 +64,10 @@ def getPoolPrice(w3,
             pool = [x for x in pools if pools[x] == {t_a, t_b, PoolFee}]
             if not pool:
                 pool = w3.eth.contract(address=UniFactory, abi=abi).functions.getPool(t_a, t_b, PoolFee).call()
-                t0 = w3.eth.contract(address=pool, abi=abi).functions.token0().call()
+                t0 = None
+                logging.info(f'Factory pool: {pool}')
+                if pool != '0x0000000000000000000000000000000000000000':
+                    t0 = w3.eth.contract(address=pool, abi=abi).functions.token0().call()
                 pools[pool] = {t_a, t_b, PoolFee}
                 tokens0[pool] = t0
             else:
