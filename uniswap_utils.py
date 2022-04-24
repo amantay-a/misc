@@ -106,7 +106,6 @@ def getPoolPrice(w3,
 
             logging.info(f'block={blockNumber}, pool: {pool}, step, price= {price}')
             if not blockNumber in ret_price:
-                ret_price[blockNumber] = {}
-            ret_price[blockNumber].update({'pool':pool, 'PoolFee':PoolFee, 'twap': price})
-
+                ret_price[blockNumber] = []
+            ret_price[blockNumber].append({'pool':pool, 'PoolFee':PoolFee, 'twap': price})
     return ret_price
