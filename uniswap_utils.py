@@ -1,6 +1,6 @@
 import logging
 from web3 import Web3
-from web3.exceptions import BadFunctionCallOutput
+from web3.exceptions import BadFunctionCallOutput, ContractLogicError
 
 abi="""[
      {"name":"factory",
@@ -100,7 +100,7 @@ def getPoolPrice(w3,
 
                 price = {TWAPWindows[i]:x for i, x in enumerate(price)}
 
-            except BadFunctionCallOutput as err:
+            except (BadFunctionCallOutput, ContractLogicError) as err:
                 price = {TWAPWindows[i]:None for i, x in enumerate(TWAPWindows)}
                 #logging.error(f'block={blockNumber}, pool: {pool}, error: {err}')
 
