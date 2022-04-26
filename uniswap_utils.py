@@ -1,3 +1,7 @@
+#https://docs.uniswap.org/protocol/reference/core/interfaces/IUniswapV3Factory#getpool
+#https://docs.uniswap.org/protocol/reference/core/UniswapV3Pool#observe
+#https://docs.uniswap.org/protocol/concepts/V3-overview/oracle#deriving-price-from-a-tick
+
 import logging
 from web3 import Web3
 from web3.exceptions import BadFunctionCallOutput, ContractLogicError
@@ -85,27 +89,32 @@ def getPoolPrice(w3,
         logging.info(f'pool: {pool}, token0={t0}, decimals0={decimals0}, token1={t1}, decimals1={decimals0}')
 
         for blockNumber in blocks:
-            try:
-                ticks = w3.eth.contract(address=pool, abi=abi).functions.observe(TWAPWindows+[0]).call(block_identifier = blockNumber)[0]
+            price = None
+            if pool != '0x0000000000000000000000000000000000000000':
+                try:
+                    ticks = w3.eth.contract(address=pool, abi=abi).functions.observe(TWAPWindows+[0]).call(block_identifier = blockNumber)[0]
 
-                price = [1.0001**((ticks[-1] - ticks[i])/x) for i, x in enumerate(TWAPWindows)]
-                logging.debug(f'block={blockNumber}, pool: {pool}, tick price= {price}')
+                    price = [1.0001**((ticks[-1] - ticks[i])/x) for i, x in enumerate(TWAPWindows)]
+                    logging.debug(f'block={blockNumber}, pool: {pool}, tick price= {price}')
 
-                price = [x*pow(10, decimals0)/pow(10, decimals1) for x in price]
-                logging.debug(f'block={blockNumber}, pool: {pool}, decimal price= {price}')
+                    price = [x*pow(10, decimals0)/pow(10, decimals1) for x in price]
+                    logging.debug(f'block={blockNumber}, pool: {pool}, decimal price= {price}')
 
-                if t0!=t_a: #reverse price
-                    price = [1/x for x in price]
-                    logging.debug(f'block={blockNumber}, pool: {pool}, reverse price= {price}')
+                    if t0!=t_a: #reverse price
+                        price = [1/x for x in price]
+                        logging.debug(f'block={blockNumber}, pool: {pool}, reverse price= {price}')
 
-                price = {TWAPWindows[i]:x for i, x in enumerate(price)}
+                    price = {TWAPWindows[i]:x for i, x in enumerate(price)}
 
-            except (BadFunctionCallOutput, ContractLogicError) as err:
-                price = {TWAPWindows[i]:None for i, x in enumerate(TWAPWindows)}
-                #logging.error(f'block={blockNumber}, pool: {pool}, error: {err}')
+                except (BadFunctionCallOutput, ContractLogicError) as err:
+                    pass
+                    #logging.error(f'block={blockNumber}, pool: {pool}, error: {err}')
 
             logging.info(f'block={blockNumber}, pool: {pool}, step, price= {price}')
+            if not price:
+                price = {TWAPWindows[i]:None for i, x in enumerate(TWAPWindows)}
             if not blockNumber in ret_price:
                 ret_price[blockNumber] = []
             ret_price[blockNumber].append({'pool':pool, 'PoolFee':PoolFee, 'twap': price})
+
     return ret_price
