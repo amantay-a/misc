@@ -20,14 +20,18 @@
 
 - [Terra_tx_info_decode.ipynb](Terra_tx_info_decode.ipynb): Terra tx data decode - **Jupyter Notebook (Python)** 
 
-- [chainlink_pricefeeds.ipynb](chainlink_pricefeeds.ipynb): Fetching data from Chainlink Pricefeeds - **Jupyter Notebook (Python)** 
+- [Gearbox_CA.ipynb](Gearbox_CA.ipynb): Dataset for Gearbox Credit Accounts - https://app.gearbox.fi - **Jupyter Notebook (Python)**/ **Google Data Studio exploratory report** 
 
-- [Gearbox_CA.ipynb](Gearbox_CA.ipynb): Dataset for Gearbox Credit Accounts - https://app.gearbox.fi - **Jupyter Notebook (Python)** 
+- [chainlink_pricefeeds.ipynb](chainlink_pricefeeds.ipynb): Fetching data from Chainlink Pricefeeds - **Jupyter Notebook (Python)**/ **Google Data Studio exploratory report** 
+
+- [uniswap_vs_chainlink.ipynb](uniswap_vs_chainlink.ipynb): Uniswap TWAP vs Chainlink price feeds comparison - **Jupyter Notebook (Python)** / **Google Data Studio exploratory report**
+
+- [band_vs_chainlink.ipynb](band_vs_chainlink.ipynb): Band price feeds vs Chainlink price feeds comparison - **Jupyter Notebook (Python)** / **Google Data Studio exploratory report**
+
+- [uniswap_utils.py](uniswap_utils.py): Get price from uniswap, see how to use  [Uniswap_TWAP.ipynb](Uniswap_TWAP.ipynb)
 
 - [Lido_APR.ipynb](Lido_APR.ipynb): Calculate Lido APR - **Jupyter Notebook (Python)** 
 
 - [Curve_APR.ipynb](Curve_APR.ipynb): Curve Pools data - **Jupyter Notebook (Python)** 
 
 - [Convex_APR.ipynb](Convex_APR.ipynb): Convex Pools data - **Jupyter Notebook (Python)** 
-
-- [uniswap_utils.py](uniswap_utils.py): Get price from uniswap, see how to use  [Uniswap_TWAP.ipynb](Uniswap_TWAP.ipynb)
