@@ -337,7 +337,7 @@ def main():
         if i % 50 == 0:
             logging.info (i)
 
-    logging.info(f'{i} end')
+    logging.info('{i} end')
     logging.info(df)
 
     data_cols = [x['name'] for x in df_abi[df_abi['name']=='getCreditAccountDataExtended']['abi'].values[0]['outputs'][0]['components']]
@@ -394,6 +394,14 @@ def main():
 
     logging.info(df_price_oracle)
 
+    df_token_price = pd.DataFrame.from_dict([allowedTokens[x] for x in allowedTokens]);
+    df_token_price.columns = [x.replace('Price_','') for x in df_token_price.columns]
+    df_token_price['batchtime'] = batchtime
+    df_token_price = df_token_price.rename(columns = {'symbol':'token'})
+    numeric_cols = [x for x in df_token_price.columns if x not in ['token', 'batchtime','decimals']]
+    df_token_price[numeric_cols] = df_token_price[numeric_cols]/1e18
+    df_token_price[numeric_cols] = df_token_price[numeric_cols].astype('float64')
+
     credentials = service_account.Credentials.from_service_account_file(
         'gearbox-336415-5ed144668529.json',
     )
@@ -412,6 +420,13 @@ def main():
                       if_exists = 'append',
                       progress_bar = False)
     logging.info('gearbox.price_oracle, insert done')
+
+    pandas_gbq.to_gbq(df_token_price,
+                      'gearbox.token_price',
+                      project_id=gcp_project_id,
+                      if_exists = 'append',
+                      progress_bar = False)
+    logging.info('gearbox.token_price, insert done')
 
     #Open, Close, Repay, Liquidate, AddCollateral, IncreaseBorrowedAmount
     OpenCreditAccount_topic      =  df_abi[(df_abi['name']=='OpenCreditAccount') &(df_abi['type']=='event')]['topic'].values[0]
