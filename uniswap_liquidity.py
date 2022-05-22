@@ -69,32 +69,49 @@ token_dict = {'WETH':'0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
              'SPELL':'0x090185f2135308BaD17527004364eBcC2D37e5F6',
              'LQTY' :'0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D',
             }
+token_decimals = {}
+
 def get_factory(w3, abi, Router):
     UniRouter = Web3.toChecksumAddress(Router)
     Factory = w3.eth.contract(address=UniRouter, abi=abi).functions.factory().call()
 
     return Factory
+
+def get_token_decimals (w3, abi, token_address, symbol=None):
+    token_address = Web3.toChecksumAddress(token_address)
+    if token_address not in token_decimals:
+        decimals = w3_eth.eth.contract(address=token_address, abi=abi).functions.decimals().call()
+        token_decimals[token_address] = decimals
+        if symbol:
+            token_decimals[symbol] = decimals
+
+    return token_decimals[token_address]
+
+
 def main():
     pools = {}
 
-    factory2 = get_factory(w3_eth,abi, UniV2Router)
+    factory2 = get_factory(w3_eth, abi, UniV2Router)
     logging.info(f'factory2: {factory2}')
     factory3 = get_factory(w3_eth,abi, UniV3Router)
     logging.info(f'factory3: {factory3}')
 
     for symbol0 in token_base:
-        token0 = token_base[symbol0]
-        base_decimals = w3_eth.eth.contract(address=token0, abi=abi).functions.decimals().call()
+        token0 = Web3.toChecksumAddress(token_base[symbol0])
+        base_decimals = get_token_decimals(w3_eth, abi, token0, symbol0)
+
         logging.info(f'pools count= {len(pools)}..')
 
         for symbol1 in token_dict:
-            token1 = token_dict[symbol1]
+            token1 = Web3.toChecksumAddress(token_dict[symbol1])
+            token_decimals = get_token_decimals(w3_eth, abi, token1, symbol1)
 
             pool = w3_eth.eth.contract(address=factory2, abi=abi).functions.getPair(token0,token1).call()
-            pools[pool] = {'token':symbol1,
-                           'base_token':symbol0,
-                           'base_decimals':base_decimals,
-                           'version':'Uniswap V2',
+            pools[pool] = {'token'         :symbol1,
+                           'token_decimals':token_decimals,
+                           'base_token'    :symbol0,
+                           'base_decimals' :base_decimals,
+                           'version'       :'Uniswap V2',
                            'fee' : None,}
 
             multi_getPool = Multicall([
@@ -105,6 +122,7 @@ def main():
             multi_getPool = multi_getPool()
 
             pools.update({ multi_getPool[fee]:{'token':symbol1,
+                                               'token_decimals':token_decimals,
                                                'base_token':symbol0,
                                                'base_decimals':base_decimals,
                                                'version':'Uniswap V3',
@@ -117,6 +135,15 @@ def main():
         if pool=='0x0000000000000000000000000000000000000000':
             pools.pop(pool)
 
+    multi_balanceOwn = Multicall([Call(token_dict[pools[x]['token']],
+                                      ['balanceOf(address)(uint256)', x],
+                                      [[x, None]]
+                                     ) for x in pools
+                                ]
+                                ,_w3 = w3_eth)
+
+    multi_balanceOwn = multi_balanceOwn()
+
 
     multi_balanceBase = Multicall([Call(token_base[pools[x]['base_token']],
                                       ['balanceOf(address)(uint256)', x],
@@ -127,7 +154,8 @@ def main():
 
     multi_balanceBase = multi_balanceBase()
 
-    {pools[x].update({pools[x]['base_token'] : multi_balanceBase[x]*10**(-pools[x]['base_decimals'])
+    {pools[x].update({  'OwnBalance'           : multi_balanceOwn[x]*10**(-pools[x]['token_decimals']),
+                        pools[x]['base_token'] : multi_balanceBase[x]*10**(-pools[x]['base_decimals']),
                      })
          for x in multi_balanceBase}
 
@@ -145,7 +173,7 @@ if __name__ == '__main__':
     logging.info (f'Ethereum connected: {w3_eth.isConnected()}')
 
     ret = main()
-    
+
     df = pd.DataFrame.from_dict(ret, orient = 'index').reset_index().rename(columns = {'index':'pool'})
     df['batchtime'] = datetime.utcnow()
     logging.info(df)
