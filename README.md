@@ -10,12 +10,6 @@
 
 - [weather_history_scraping.ipynb](weather_history_scraping.ipynb): Scrapping weather history for a long period without authorisation - **Jupyter Notebook (Python)**
 
-- [Python_to_PowerBI_acces_and_query.ipynb](Python_to_PowerBI_acces_and_query.ipynb): Export data from Power BI using XMLA Endpoint - **Jupyter Notebook (Python)**
-
-- [Web3_ABI_functions_call.ipynb](Web3_ABI_functions_call.ipynb): Calling blockchain token ABI functions using Web3 and Ethereum JSON RPC - **Jupyter Notebook (Python)** 
-
-- [multicall_and_normal_rpc_mix.ipynb](multicall_and_normal_rpc_mix.ipynb): Combining of Multicall and regular Ethereum RPC - **Jupyter Notebook (Python)** 
-
 - [EVM_logs_decode.ipynb](EVM_logs_decode.ipynb): EVM logs decode - **Jupyter Notebook (Python)** 
 
 - [Terra_tx_info_decode.ipynb](Terra_tx_info_decode.ipynb): Terra tx data decode - **Jupyter Notebook (Python)** 
