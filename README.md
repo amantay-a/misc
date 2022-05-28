@@ -29,3 +29,5 @@
 - [Curve_APR.ipynb](Curve_APR.ipynb): Curve Pools data - **Jupyter Notebook (Python)** 
 
 - [Convex_APR.ipynb](Convex_APR.ipynb): Convex Pools data - **Jupyter Notebook (Python)** 
+
+- [DEX_liquidity.ipynb](DEX_liquidity.ipynb): DEX Pools liquidity (UniswapV2/3, Sushiswap) - **Jupyter Notebook (Python)** 
