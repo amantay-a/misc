@@ -98,6 +98,9 @@ pricefeed_contracts = {
 
     ,'spell-usd': ['ethereum', Web3.toChecksumAddress('0x8640b23468815902e011948F3aB173E1E83f9879'), 0.01, 'usd', 86400]
 
+    ,'avax-usd': ['ethereum', Web3.toChecksumAddress('0x0fC3657899693648bbA4dbd2d8b33b82E875105D'), 0.02, 'usd', 86400]
+
+    ,'mim-usd': ['ethereum', Web3.toChecksumAddress('0x18f0112E30769961AF90FDEe0D1c6B27E6d72D92'), 0.005, 'usd', 86400]
     }
 
 config = {'ethereum':pricefeed_contracts,
@@ -260,7 +263,7 @@ if __name__ == '__main__':
         level=os.environ.get('LOGLEVEL', 'INFO').upper(),
         datefmt='%Y-%m-%d %H:%M:a%S',
         )
-    w3_connection = {'ethereum' : Web3(Web3.HTTPProvider(RPC_Endpoint, request_kwargs={'timeout': 20}))}
+    w3_connection = {'ethereum' : Web3(Web3.HTTPProvider(RPC_Endpoint, request_kwargs={'timeout': 30}))}
     logging.info (f'Ethereum connected: {w3_connection["ethereum"].isConnected()}')
 
     main()

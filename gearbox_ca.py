@@ -524,7 +524,7 @@ if __name__ == '__main__':
         level=os.environ.get('LOGLEVEL', 'INFO').upper(),
         datefmt='%Y-%m-%d %H:%M:a%S',
         )
-    w3_eth = Web3(Web3.HTTPProvider(RPC_Endpoint, request_kwargs={'timeout': 20}))
+    w3_eth = Web3(Web3.HTTPProvider(RPC_Endpoint, request_kwargs={'timeout': 30}))
     logging.info (f'Ethereum connected: {w3_eth.isConnected()}')
 
     main()
