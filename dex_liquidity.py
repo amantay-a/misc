@@ -1,6 +1,7 @@
 import os
 import logging
 import pandas as pd
+import requests
 from datetime import datetime
 from web3 import Web3
 from web3.exceptions import BadFunctionCallOutput, ContractLogicError
@@ -35,11 +36,13 @@ UniV2Router = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
 UniV3Router = '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45'
 UniV3Fee    = [100, 500, 3000, 10000]
 SushiRouter = '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F'
+CURVE_GITHUB_POOLS = "https://api.github.com/repos/curvefi/curve-contract/contents/contracts/pools"
+CURVE_GITHUB_POOLDATA = "https://raw.githubusercontent.com/curvefi/curve-contract/master/contracts/pools/{}/pooldata.json"
 
 token_base = {'WBTC':'0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
               'USDC':'0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
                'DAI':'0x6B175474E89094C44Da98b954EedeAC495271d0F',
-               'WETH':'0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+              'WETH':'0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
              }
 
 token_dict = {'WBTC':'0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
@@ -74,6 +77,31 @@ token_dict = {'WBTC':'0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
             }
 token_decimals = {}
 
+curve_pool_data = {}
+
+def get_curve_pools(tokenA, tokenB):
+    if tokenA == tokenB:
+        return []
+
+    curve_pools = []
+    if not curve_pool_data:
+        pool_names = [i["name"] for i in requests.get(CURVE_GITHUB_POOLS).json() if i["type"] == "dir"]
+
+        for name in pool_names:
+            data = requests.get(CURVE_GITHUB_POOLDATA.format(name)).json()
+            if "swap_address" not in data:
+                print(f"Cannot add {name} - no deployment address!")
+                continue
+            curve_pool_data[name] = data
+
+    for pool in curve_pool_data:
+        for coin in curve_pool_data[pool]['coins']:
+            if 'underlying_address' in coin and coin['underlying_address'].lower() == tokenA.lower():
+                    for coin in curve_pool_data[pool]['coins']:
+                        if ('underlying_address' in coin and coin['underlying_address'].lower() == tokenB.lower()):
+                            curve_pools.append(curve_pool_data[pool]['swap_address'])
+    return curve_pools
+
 def get_factory(w3, abi, Router):
     UniRouter = Web3.toChecksumAddress(Router)
     Factory = w3.eth.contract(address=UniRouter, abi=abi).functions.factory().call()
@@ -106,19 +134,26 @@ def main(w3):
 
         logging.info(f'pools count= {len(pools)}..')
 
+        logging.debug(f'base = {symbol0}')
+
         for symbol1 in token_dict:
+            logging.debug(f'token= {symbol1}')
             token1 = Web3.toChecksumAddress(token_dict[symbol1])
             token_decimals = get_token_decimals(w3, abi, token1, symbol1)
 
             pool_uni2 = w3.eth.contract(address=UniFactory2, abi=abi).functions.getPair(token0,token1).call()
-            pools[pool_uni2] = {'token'        :symbol1,
+            pools[symbol1+'_'+symbol0+'_'+pool_uni2] = \
+                               {'pool'          :pool_uni2,
+                                'token'         :symbol1,
                                 'token_decimals':token_decimals,
                                 'base_token'    :symbol0,
                                 'base_decimals' :base_decimals,
                                 'version'       :'Uniswap V2',
                                 'fee' : None,}
             pool_sushi = w3.eth.contract(address=SushiFactory, abi=abi).functions.getPair(token0,token1).call()
-            pools[pool_sushi] = {'token'       :symbol1,
+            pools[symbol1+'_'+symbol0+'_'+pool_sushi] = \
+                                {'pool'          :pool_sushi,
+                                 'token'         :symbol1,
                                  'token_decimals':token_decimals,
                                  'base_token'    :symbol0,
                                  'base_decimals' :base_decimals,
@@ -132,22 +167,35 @@ def main(w3):
 
             multi_getPool = multi_getPool()
 
-            pools.update({ multi_getPool[fee]:{'token':symbol1,
+            pools.update({ symbol1+'_'+symbol0+'_'+multi_getPool[fee]:
+                                              {'pool'          :multi_getPool[fee],
+                                               'token'         :symbol1,
                                                'token_decimals':token_decimals,
-                                               'base_token':symbol0,
-                                               'base_decimals':base_decimals,
-                                               'version':'Uniswap V3',
+                                               'base_token'    :symbol0,
+                                               'base_decimals' :base_decimals,
+                                               'version'       :'Uniswap V3',
                                                'fee' : fee/10**6}
                           for fee in multi_getPool})
 
+            curve_pools = get_curve_pools(token1, token0)
+            pools.update({ symbol1+'_'+symbol0+'_'+x:
+                                              {'pool'          :x,
+                                               'token'         :symbol1,
+                                               'token_decimals':token_decimals,
+                                               'base_token'    :symbol0,
+                                               'base_decimals' :base_decimals,
+                                               'version'       :'Curve',
+                                               'fee' : None}
+                          for x in curve_pools})
+
     logging.info(f'pools count= {len(pools)}')
 
-    for pool in list(pools.keys()):
-        if pool=='0x0000000000000000000000000000000000000000':
-            pools.pop(pool)
+    for x in list(pools.keys()):
+        if pools[x]['pool']=='0x0000000000000000000000000000000000000000':
+            pools.pop(x)
 
     multi_balanceOwn = Multicall([Call(token_dict[pools[x]['token']],
-                                      ['balanceOf(address)(uint256)', x],
+                                      ['balanceOf(address)(uint256)', pools[x]['pool']],
                                       [[x, None]]
                                      ) for x in pools
                                 ]
@@ -157,7 +205,7 @@ def main(w3):
 
 
     multi_balanceBase = Multicall([Call(token_base[pools[x]['base_token']],
-                                      ['balanceOf(address)(uint256)', x],
+                                      ['balanceOf(address)(uint256)', pools[x]['pool']],
                                       [[x, None]]
                                      ) for x in pools
                                 ]
@@ -185,7 +233,7 @@ if __name__ == '__main__':
 
     ret = main(w3_eth)
 
-    df = pd.DataFrame.from_dict(ret, orient = 'index').reset_index().rename(columns = {'index':'pool'})
+    df = pd.DataFrame.from_dict(ret, orient = 'index').reset_index()
     df['batchtime'] = datetime.utcnow()
     logging.info(df)
 
