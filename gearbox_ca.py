@@ -123,7 +123,7 @@ def get_data_multicall(w3, df, function_name, df_abi, contract_address = None):
                         Call(y, [function_signature], [[x, None]]) for x,y in zip(df['id'],df['CA'])
                         ]
                         ,_w3 = w3)
-    elif function_name == 'getCreditAccountDataExtended':
+    elif function_name == 'getCreditAccountData':
         multi_result = Multicall([
                         Call(contract_address, [function_signature, y, z], [[x, None]]) for x,y,z in zip(df['id'],df['CM'],df['Borrower'])
                         ]
@@ -137,9 +137,9 @@ def get_data_multicall(w3, df, function_name, df_abi, contract_address = None):
     d_multi_result = AttributeDict.recursive(multi_result)
     return d_multi_result
 
-def getCreditAccountDataExtended(id, cm, borrower):
+def getCreditAccountData(id, cm, borrower):
     try:
-        return w3_eth.eth.contract(address=DataCompressor, abi=DataCompressor_abi).functions.getCreditAccountDataExtended(cm, borrower).call()
+        return w3_eth.eth.contract(address=DataCompressor, abi=DataCompressor_abi).functions.getCreditAccountData(cm, borrower).call()
     except:
         logging.error('Error: id=',id,'CM=',cm,'Borrower=',borrower)
 
@@ -340,17 +340,17 @@ def main():
     logging.info('{i} end')
     logging.info(df)
 
-    data_cols = [x['name'] for x in df_abi[df_abi['name']=='getCreditAccountDataExtended']['abi'].values[0]['outputs'][0]['components']]
+    data_cols = [x['name'] for x in df_abi[df_abi['name']=='getCreditAccountData']['abi'].values[0]['outputs'][0]['components']]
 
     batchtime = datetime.utcnow()
     df['batchtime'] = batchtime
     for ids in list(chunks(list(df[pd.notna(df['Borrower'])].loc[:,'id']), 1000)): #chunk size for multicall = 1000 (reduce in case of issues)
         id_range = list(df['id'].isin(ids))
         try:
-            d_data = get_data_multicall(w3_eth, df.loc[id_range], 'getCreditAccountDataExtended', df_abi, DataCompressor)
+            d_data = get_data_multicall(w3_eth, df.loc[id_range], 'getCreditAccountData', df_abi, DataCompressor)
         except ContractLogicError:
-            logging.error('getCreditAccountDataExtended: Multicall error, calling it one by one')
-            d_data = {x:getCreditAccountDataExtended(x,y,z) for x,y,z in zip(df.loc[id_range]['id'],df.loc[id_range]['CM'],df.loc[id_range]['Borrower'])}
+            logging.error('getCreditAccountData: Multicall error, calling it one by one')
+            d_data = {x:getCreditAccountData(x,y,z) for x,y,z in zip(df.loc[id_range]['id'],df.loc[id_range]['CM'],df.loc[id_range]['Borrower'])}
             d_data = AttributeDict.recursive(d_data)
         for data in data_cols:
             if data not in ['balances', 'inUse', 'borrower', 'addr', 'borrower', 'creditManager', 'since']: #duplicate columns
@@ -370,9 +370,10 @@ def main():
 
     #For compatability with BQ data types
     numeric_cols = [x for x in df.columns if x not in ['CA', 'CM' ,'Symbol', 'Borrower', 'batchtime',
-                                                          'underlyingToken', 'canBeClosed']]
+                                                          'underlyingToken', 'underlying', 'canBeClosed']]
     df[numeric_cols] = df[numeric_cols].astype('float64')
     df['canBeClosed'] =  df['canBeClosed'].astype('bool')
+    df.columns = [x.replace('-','_') for x in df.columns]
 
     logging.info(df.dtypes)
 
@@ -384,6 +385,7 @@ def main():
 
     df_price_oracle = df_price_oracle.reset_index()
     df_price_oracle = df_price_oracle.rename(columns={'index': 'Price_Asset'})
+    df_price_oracle.columns = [x.replace('-','_') for x in df_price_oracle.columns]
     df_price_oracle['Price_Asset'] = df_price_oracle['Price_Asset'].apply(lambda x: x.replace('Price_',''))
 
     df_price_oracle['batchtime'] = batchtime
@@ -401,6 +403,9 @@ def main():
     numeric_cols = [x for x in df_token_price.columns if x not in ['token', 'batchtime','decimals']]
     df_token_price[numeric_cols] = df_token_price[numeric_cols]/1e18
     df_token_price[numeric_cols] = df_token_price[numeric_cols].astype('float64')
+    df_token_price.columns = [x.replace('-','_') for x in df_token_price.columns]
+
+    logging.info(df_token_price)
 
     credentials = service_account.Credentials.from_service_account_file(
         'gearbox-336415-5ed144668529.json',
@@ -410,7 +415,7 @@ def main():
     pandas_gbq.to_gbq(df,
                       'gearbox.credit_account',
                       project_id=gcp_project_id,
-                      if_exists = 'append',
+                      if_exists = 'replace',
                       progress_bar = False)
     logging.info('gearbox.credit_account, insert done')
 
