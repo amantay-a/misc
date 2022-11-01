@@ -392,12 +392,12 @@ def main():
             CA_collateral_event = [x for x in collateral_events if x['onBehalfOf']== Borrower] # Open
             if len(CA_collateral_event) > 0:
                 Collateral = Collateral + sum(
-                                                [x['value']*(allowedTokens[x['token']]['Price_USD'])*(10**-allowedTokens[x['token']]['decimals'])
-                                                 /allowedTokens[cm_dict[row.CM]['token']]['Price_USD']*(10**-row.Decimals)
-                                                for x in CA_collateral_event
-                                                if allowedTokens[cm_dict[row.CM]['token']]['Price_USD']>0
-                                                ]
-                                             )
+                                            [(x['value']*(allowedTokens[x['token']]['Price_USD'])*(10**-allowedTokens[x['token']]['decimals']))
+                                             /(allowedTokens[cm_dict[row.CM]['token']]['Price_USD']*(10**-row.Decimals))
+                                            for x in CA_collateral_event
+                                            if allowedTokens[cm_dict[row.CM]['token']]['Price_USD']>0
+                                            ]
+                                         )
             df.loc[df['id']==row.id, 'Collateral'] = Collateral
 
             CA_close_event = [x for x in close_events if x['to']== Borrower] # Close
