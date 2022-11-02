@@ -524,7 +524,17 @@ def main():
     LiquidateCreditAccount_topic_v1     =  df_abi[(df_abi['name']=='LiquidateCreditAccount') & (df_abi['contract_type']=='CreditManager_v1') & (df_abi['type']=='event')]['topic'].values[0]
     LiquidateExpiredCreditAccount_topic =  df_abi[(df_abi['name']=='LiquidateExpiredCreditAccount')  & (df_abi['contract_type']=='creditFacade') &(df_abi['type']=='event')]['topic'].values[0]
 
-    from_block = 0
+    try:
+        df_blocknum = pandas_gbq.read_gbq('select max(blockNumber) from gearbox.account_events',
+                                 project_id=gcp_project_id,
+                                 progress_bar_type = None,)
+        if pd.notna(df_blocknum.iloc[0,0]):
+            from_block = int(df_blocknum.iloc[0,0]) + 1
+        else:
+            from_block = 0
+    except pandas_gbq.exceptions.GenericGBQException:
+        logging.error('The table does not exist?')
+        from_block = 0
 
     logging.info(f'from_block={from_block}')
 
