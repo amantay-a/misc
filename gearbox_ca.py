@@ -408,7 +408,7 @@ def main():
             if len(CA_repay_event) > 0:
                 df.loc[df['id']==row.id, ['Borrower', 'borrowedAmount', 'Collateral']] = [None, 0, 0]
 
-            CA_liquidate_event = [x for x in liquidate_event if x['owner']== Borrower] # Liquidate
+            CA_liquidate_event = [x for x in liquidate_event if ('owner' in x and x['owner']==Borrower) or ('borrower' in x and x['borrower']==Borrower)] # Liquidate
             if len(CA_liquidate_event) > 0:
                 df.loc[df['id']==row.id, ['Borrower', 'borrowedAmount', 'Collateral']] = [None, 0, 0]
 
@@ -581,7 +581,8 @@ def main():
                                                       if x['event'] in ['CloseCreditAccount','CloseCreditAccount']
                                                       else x['args']['onBehalfOf'] if x['event'] in ['OpenCreditAccount','AddCollateral']
                                                       else x['args']['borrower'] if x['event'] in ['IncreaseBorrowedAmount']
-                                                      else x['args']['owner'] if x['event'] in ['LiquidateCreditAccount', 'LiquidateExpiredCreditAccount']
+                                                      else x['args']['owner'] if 'owner' in x['args'] and x['event'] in ['LiquidateCreditAccount', 'LiquidateExpiredCreditAccount']
+                                                      else x['args']['borrower'] if 'borrower' in x['args'] and x['event'] in ['LiquidateCreditAccount', 'LiquidateExpiredCreditAccount']
                                                       else None
                                             ,axis=1)
         df_events['Liquidator'] = df_events.apply(lambda x: x['args']['liquidator'] if x['event'] in ['LiquidateCreditAccount','LiquidateExpiredCreditAccount']
