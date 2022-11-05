@@ -480,7 +480,7 @@ def main():
     df_token_price['batchtime'] = batchtime
     df_token_price = df_token_price.rename(columns = {'symbol':'token'})
     numeric_cols = [x for x in df_token_price.columns if x not in ['token', 'batchtime','decimals']]
-    df_token_price[numeric_cols] = df_token_price[numeric_cols]/1e18
+    df_token_price[numeric_cols] = df_token_price[numeric_cols]
     df_token_price[numeric_cols] = df_token_price[numeric_cols].astype('float64')
     df_token_price.columns = [x.replace('-','_') for x in df_token_price.columns]
 
