@@ -169,6 +169,7 @@ def main():
 
     df_columns = ['ticker', 'updated_at', 'chain','price', 'price_decimal', 'type', 'threshold', 'base', 'heartbeat', 'decimals', 'blockNumber','tx_hash']
     df = pd.DataFrame(columns = df_columns)
+    df_eth_usd = pd.DataFrame(columns = df_columns) 
 
     event_AnswerUpdated = get_event_abi(abi, 'AnswerUpdated')
     topic_AnswerUpdated  = encode_hex(event_abi_to_log_topic(event_AnswerUpdated))
