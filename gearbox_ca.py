@@ -183,7 +183,7 @@ def main():
 
     cm_dict = {AccountFactory: {'token': None, 'symbol': None, 'decimals': None, 'version': None,'creditFacade': None}}
     allowedTokens = {}
-    CreditManager_abi = Token_abi = CreditFilter_abi = creditFacade_abi = priceOracle_abi = ''
+    CreditManager_abi = Token_abi = CreditFilter_abi = creditFacade_abi = priceOracle_abi = creditConfigurator_abi = ''
 
     for i, CreditManager in enumerate(CreditManagers):
         logging.info(f'CreditManager {i+1} of {len(CreditManagers)}')
@@ -218,6 +218,9 @@ def main():
             creditFacade = w3_eth.eth.contract(address=CreditManager, abi=CreditManager_abi).functions.creditFacade().call()
             if not creditFacade_abi:
                 creditFacade_abi = pull_abi_etherscan(creditFacade)
+            if not creditConfigurator_abi:
+                creditConfigurator = w3_eth.eth.contract(address=CreditManager, abi=CreditManager_abi).functions.creditConfigurator().call()
+                creditConfigurator_abi = pull_abi_etherscan(creditConfigurator)
 
         if not Token_abi:
             Token_abi = pull_abi_etherscan(Token)
@@ -229,6 +232,7 @@ def main():
         Token_decimals = w3_eth.eth.contract(address=Token, abi=Token_abi).functions.decimals().call()
         cm_dict[CreditManager] = {'version' : version[i],
                                   'creditFacade': creditFacade,
+                                  'creditFacade_upgraded':[],
                                   'token': Token,
                                   'symbol': Token_symbol,
                                   'decimals': Token_decimals,
@@ -296,6 +300,7 @@ def main():
                         'CreditManager': CreditManager_abi,
                         'creditFacade': creditFacade_abi,
                         'CreditManager_v1': CreditManager_v1_abi,
+                        'creditConfigurator':creditConfigurator_abi,
                        })
 
     logging.info(pformat(cm_dict))
@@ -323,6 +328,10 @@ def main():
     df['CF'] = df.apply(lambda x: cm_dict[x['CM']]['creditFacade'] , axis=1)
 
     logging.info(df)
+
+    #newConfigurator, CreditFacadeUpgraded
+    newConfigurator_topic = df_abi[(df_abi['name']=='NewConfigurator') & (df_abi['type']=='event')]['topic'].values[0]
+    CreditFacadeUpgraded_topic = df_abi[(df_abi['name']=='CreditFacadeUpgraded') & (df_abi['type']=='event')]['topic'].values[0]
 
     #Open, Close, Repay, Liquidate
     OpenCreditAccount_topic             =  df_abi[(df_abi['name']=='OpenCreditAccount') &(df_abi['contract_type']=='creditFacade') & (df_abi['type']=='event')]['topic'].values[0]
@@ -355,33 +364,44 @@ def main():
                                  RepayCreditAccount_topic_v1,
                                  LiquidateCreditAccount_topic_v1,]
                                  ],
-                                 df.loc[df['CM']==CM]['Since'].min(),
+                                 block_from,
                                  'latest')
             logs = logs.append(CM_logs, ignore_index = True)
 
             if cm_dict[CM]['creditFacade']:
-                CF_logs = get_logs(w3_eth, cm_dict[CM]['creditFacade'], df_abi,
-                                   [[OpenCreditAccount_topic,
-                                     AddCollateral_topic,
-                                     CloseCreditAccount_topic,
-                                     LiquidateCreditAccount_topic,
-                                     LiquidateExpiredCreditAccount_topic,]
-                                     ],
-                                     df.loc[df['CM']==CM]['Since'].min(),
-                                     'latest')
-                logs = logs.append(CF_logs, ignore_index = True)
+                cm_dict[CM]['creditFacade_upgraded'] = []
+                cc_upgraded = get_logs(w3_eth, CM, df_abi, [[newConfigurator_topic]], 1, 'latest')['args'].values
+                cc_upgraded = [x['newConfigurator'] for x in cc_upgraded]
+
+                for cc in cc_upgraded:
+                    cf_upgraded = get_logs(w3_eth, cc, df_abi, [[CreditFacadeUpgraded_topic]],1, 'latest')['args'].values
+                    cf_upgraded = [x['newCreditFacade'] for x in cf_upgraded]
+
+                    for cf in cf_upgraded:
+                        logging.info(f'CreditFacade: {cf}')
+                        if cf not in cm_dict[CM]['creditFacade_upgraded']:
+                            CF_logs = get_logs(w3_eth, cf, df_abi,
+                                               [[OpenCreditAccount_topic,
+                                                 AddCollateral_topic,
+                                                 CloseCreditAccount_topic,
+                                                 LiquidateCreditAccount_topic,
+                                                 LiquidateExpiredCreditAccount_topic,]
+                                                 ],
+                                                 block_from,
+                                                 'latest')
+                            cm_dict[CM]['creditFacade_upgraded'] = cm_dict[CM]['creditFacade_upgraded']+[cf]
+                            logs = logs.append(CF_logs, ignore_index = True)
+
+                            logging.info(f'CF_logs count: {len(CF_logs)}')
 
     i=0
     for row in df.loc[df['CM'].isin(CreditManagers)].itertuples():
         i+=1
-        open_events       = logs[(logs['address'].isin([row.CM,row.CF])) & (logs['blockNumber']>=row.Since) & (logs['event']=='OpenCreditAccount')]['args'].values
-        collateral_events = logs[(logs['address'].isin([row.CM,row.CF])) & (logs['blockNumber']>=row.Since) & (logs['event']=='AddCollateral')]['args'].values
-        close_events      = logs[(logs['address'].isin([row.CM,row.CF])) & (logs['blockNumber']>=row.Since) & (logs['event']=='CloseCreditAccount')]['args'].values
-        repay_events      = logs[(logs['address'].isin([row.CM,row.CF])) & (logs['blockNumber']>=row.Since) & (logs['event']=='RepayCreditAccount')]['args'].values
-        liquidate_event   = logs[(logs['address'].isin([row.CM,row.CF])) & (logs['blockNumber']>=row.Since) & (logs['event'].isin(['LiquidateCreditAccount', 'LiquidateExpiredCreditAccount']))]['args'].values
-
-
-
+        open_events       = logs[(logs['address'].isin([row.CM]+cm_dict[row.CM]['creditFacade_upgraded'])) & (logs['blockNumber']>=row.Since) & (logs['event']=='OpenCreditAccount')]['args'].values
+        collateral_events = logs[(logs['address'].isin([row.CM]+cm_dict[row.CM]['creditFacade_upgraded'])) & (logs['blockNumber']>=row.Since) & (logs['event']=='AddCollateral')]['args'].values
+        close_events      = logs[(logs['address'].isin([row.CM]+cm_dict[row.CM]['creditFacade_upgraded'])) & (logs['blockNumber']>=row.Since) & (logs['event']=='CloseCreditAccount')]['args'].values
+        repay_events      = logs[(logs['address'].isin([row.CM]+cm_dict[row.CM]['creditFacade_upgraded'])) & (logs['blockNumber']>=row.Since) & (logs['event']=='RepayCreditAccount')]['args'].values
+        liquidate_event   = logs[(logs['address'].isin([row.CM]+cm_dict[row.CM]['creditFacade_upgraded'])) & (logs['blockNumber']>=row.Since) & (logs['event'].isin(['LiquidateCreditAccount', 'LiquidateExpiredCreditAccount']))]['args'].values
 
         CA_open_event = [x for x in open_events if x['creditAccount']== row.CA] # Open
         if len(CA_open_event) > 0:
@@ -412,7 +432,7 @@ def main():
             if len(CA_liquidate_event) > 0:
                 df.loc[df['id']==row.id, ['Borrower', 'borrowedAmount', 'Collateral']] = [None, 0, 0]
 
-        if i % 50 == 0:
+        if i % 500 == 0:
             logging.info (i)
 
     logging.info(f'{i} end')
@@ -554,20 +574,24 @@ def main():
         df_events = df_events.append(logs_v1, ignore_index = True)
 
         if cm_dict[CM]['creditFacade']:
-            logging.info(f'get_logs from CF {cm_dict[CM]["creditFacade"]}')
-            logs = get_logs(w3_eth, cm_dict[CM]['creditFacade'], df_abi,
-                            [[OpenCreditAccount_topic,
-                              AddCollateral_topic,
-                              CloseCreditAccount_topic,
-                              LiquidateCreditAccount_topic,
-                              LiquidateExpiredCreditAccount_topic]
-                            ],
-                            from_block,
-                            'latest')
-            df_events = df_events.append(logs, ignore_index = True)
+            for cf in cm_dict[CM]['creditFacade_upgraded']:
+                logging.info(f'get_logs from CF {cf}')
+                logs = get_logs(w3_eth, cf, df_abi,
+                                [[OpenCreditAccount_topic,
+                                  AddCollateral_topic,
+                                  CloseCreditAccount_topic,
+                                  LiquidateCreditAccount_topic,
+                                  LiquidateExpiredCreditAccount_topic]
+                                ],
+                                from_block,
+                                'latest')
+                df_events = df_events.append(logs, ignore_index = True)
 
     logging.info(f'number of events={len(df_events)}')
-    cf_dict = {cm_dict[y]['creditFacade']:{'CreditManager':y} for y in cm_dict if cm_dict[y]['creditFacade']}
+    cf_dict = {x:cm_dict[x]['creditFacade_upgraded'] for x in cm_dict if 'creditFacade_upgraded' in cm_dict[x]}
+    cf_dict = {x:cf_dict[x] for x in cf_dict if len(cf_dict[x])>0}
+    cf_dict = {y:{'CreditManager':x} for x in cf_dict for y in cf_dict[x]}
+    logging.info(f'cf_dict = {cf_dict}')
 
     if len(df_events)>0:
         df_events['CF'] = df_events['address'].apply(lambda x: x if x in cf_dict else None)
@@ -626,7 +650,7 @@ if __name__ == '__main__':
     logging.basicConfig(
         format='%(asctime)s %(funcName)s %(levelname)s %(message)s',
         level=os.environ.get('LOGLEVEL', 'INFO').upper(),
-        datefmt='%Y-%m-%d %H:%M:a%S',
+        datefmt='%Y-%m-%d %H:%M:%S',
         )
     w3_eth = Web3(Web3.HTTPProvider(RPC_Endpoint, request_kwargs={'timeout': 30}))
     logging.info (f'Ethereum connected: {w3_eth.isConnected()}')
